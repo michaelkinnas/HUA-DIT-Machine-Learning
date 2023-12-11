@@ -18,16 +18,16 @@ class MLProject2Dataset(torch.utils.data.Dataset):
         })
 
         # Create dataframe for metadata
-        self.metadata = pd.read_csv(metadata_fname)
+        self.metadata = pd.read_csv(data_dir + '/'+metadata_fname)
         self.metadata['dx'] = self.metadata['dx'].astype('category').cat.codes
         
 
         # Create main dataframe
-        self.dataset = pd.concat([self.files,  self.metadata['dx']], axis=1)
+        self.dataset = pd.concat([self.files['path'],  self.metadata['dx']], axis=1)
 
     def __len__(self):
         return len(self.dataset)
     
     def __getitem__(self, idx):
-        return torchvision.io.read_image(self.dataset.at[idx, 'path']).to(torch.float32) / 255
+        return (torchvision.io.read_image(self.dataset.at[idx, 'path']).to(torch.float32) / 255, self.dataset.at[idx, 'dx'])
       
