@@ -1,8 +1,10 @@
 import torch
+import torchvision
 import pandas as pd
 import glob
 import os
 from pathlib import Path
+import PIL
 
 class MLProject2Dataset(torch.utils.data.Dataset):
     def __init__(self, data_dir, metadata_fname='metadata.csv', transform=None):
@@ -22,5 +24,10 @@ class MLProject2Dataset(torch.utils.data.Dataset):
 
         # Create main dataframe
         self.dataset = pd.concat([self.files,  self.metadata['dx']], axis=1)
-        
-        
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, idx):
+        return torchvision.io.read_image(self.dataset.at[idx, 'path']).to(torch.float32) / 255
+      
