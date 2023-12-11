@@ -52,9 +52,3 @@ class LinearRegression:
         self.mse = 1 / len(X) * np.dot((self.yhat - y).T, (self.yhat - y))
 
         return self.yhat, self.mse
-
-    def print_vars(self):
-        print(f'W: {self.w}')
-        print(f'b: {self.b}')
-        print(f'yhat: {self.yhat}')
-        print(f'MSE: {self.mse}')
