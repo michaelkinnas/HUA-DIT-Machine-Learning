@@ -42,25 +42,87 @@ def image_transforms(m, n):
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
             ])
 
-# def train(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
-#           epochs: int = 10, optimizer: optim = None, loss: nn.modules.loss = None,
-#           device: str = 'cpu', print_period: int = 10) -> None:
-    
-    
-#     size = len(dataloader.dataset)
-#     model.train()
-#     for batch, (X, y) in enumerate(dataloader):
-#         X, y = X.to(device), y.to(device)
-#         pred = model(X)
-#         loss = loss_fn(pred, y)
 
-#         # Compute gradients with backpropagation
-#         loss.backward()
-#         # Execute an optimization step
-#         optimizer.step()
-#         # Need to zero out our gradients, since loss.backward() accumulates losses
-#         optimizer.zero_grad()
+# TODO accuracy
+def train(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
+          epochs: int = 10, optimizer: optim = None, loss: nn.modules.loss = None,
+          device: str = 'cpu', print_period: int = 10) -> None:
+    
+    model.train()
+    for epoch in range(epochs):
+        running_loss = 0.0
+        train_correct = 0
+        current_period_total = 0
+        for batch, (X, y) in enumerate(trainloader, 0):
+            # Move to device
+            X, y = X.to(device), y.to(device)
 
-#         if batch % 100 == 0:
-#             loss, current = loss.item(), (batch+1)*len(X)
-#             print(f"loss: {loss:>7f} [{current:>5d} / {size:>5d}]")
+            # Zero gradients
+            optimizer.zero_grad()
+
+            # Forward pass
+            pred = model(X)
+            current_loss = loss(pred, y)
+
+            # Convert probs to prediction
+            yhat = torch.argmax(pred, 1)
+
+            # Count correct predictions
+            train_correct += (yhat == y).type(torch.float).sum().item()
+            current_period_total += y.size(0)
+
+            # Backpropagation
+            current_loss.backward()
+
+            # Parameter update
+            optimizer.step()
+
+            # Print            
+            running_loss += current_loss.item()
+
+            if batch % print_period == print_period-1:
+                avg_loss = running_loss / print_period
+
+                model.eval()
+                with torch.inference_mode():
+                    valid_running_loss = 0.0
+                    valid_correct = 0
+                    for (X, y) in valloader:
+                        # Model predictions
+                        pred_valid = model(X)
+
+                        # Calculate loss for current batch
+                        valid_running_loss += loss(pred_valid, y).item()
+
+                        # Convert probs to prediction
+                        yhat = torch.argmax(pred, 1)
+
+                        # Count correct predictions
+                        valid_correct += (yhat == y).type(torch.float).sum().item()
+
+                print(f"Epoch: {epoch}, batch: {batch:5d}] train loss: {avg_loss:.3f} train acc: {train_correct/current_period_total:.3f} | val loss: {valid_running_loss / len(valloader.dataset):.3f} val acc: {valid_correct/len(valloader.dataset):.3f}")
+                
+                # Put model back into train mode
+                model.train()
+                
+
+
+def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu') -> None:
+    model.eval()
+    total = 0
+    correct = 0
+    with torch.inference_mode():
+        test_running_loss = 0.0
+        for (X, y) in testloader:        
+            X, y = X.to(device), y.to(device)
+            pred = model(X)
+
+            # Calculate loss
+            test_running_loss += loss(pred, y).item() 
+
+            # Convert to predictions and calculate accuracy
+            yhat = torch.argmax(pred, 1)
+            total += y.size(0)
+            correct += (yhat == y).type(torch.float).sum().item()
+
+    print(f"Average loss: {test_running_loss/len(testloader.dataset):.4f}. Test accuracy in {total} images: {correct/total:4f}")  #Chech the 4f parameter without dot
