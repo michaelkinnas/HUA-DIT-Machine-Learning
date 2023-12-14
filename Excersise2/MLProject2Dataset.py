@@ -33,20 +33,27 @@ class MLProject2Dataset(Dataset):
         return len(self.dataset)
     
     def __getitem__(self, idx):
-        return (torchvision.io.read_image(self.dataset.at[idx, 'path']).to(torch.float32) / 255, self.dataset.at[idx, 'dx'])
+        
+        image = torchvision.io.read_image(self.dataset.at[idx, 'path']).to(torch.float32) / 255
+        if self.transform:
+            image = self.transform(image)
+
+        return (image, self.dataset.at[idx, 'dx'].astype('long'))
       
 
 def image_transforms(m, n):
     return transforms.Compose([
-                transforms.Resize((m, n)),
+                transforms.Resize((m, n), antialias=True),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
             ])
 
 
 # TODO accuracy
-def train(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
+def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
           epochs: int = 10, optimizer: optim = None, loss: nn.modules.loss = None,
           device: str = 'cpu', print_period: int = 10) -> None:
+    
+    print(f'Training on {device}')
     
     model.train()
     for epoch in range(epochs):
@@ -66,7 +73,7 @@ def train(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = Non
 
             # Convert probs to prediction
             yhat = torch.argmax(pred, 1)
-
+        
             # Count correct predictions
             train_correct += (yhat == y).type(torch.float).sum().item()
             current_period_total += y.size(0)
@@ -88,6 +95,7 @@ def train(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = Non
                     valid_running_loss = 0.0
                     valid_correct = 0
                     for (X, y) in valloader:
+                        X, y = X.to(device), y.to(device)
                         # Model predictions
                         pred_valid = model(X)
 
@@ -98,10 +106,11 @@ def train(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = Non
                         yhat = torch.argmax(pred, 1)
 
                         # Count correct predictions
-                        valid_correct += (yhat == y).type(torch.float).sum().item()
+                        # valid_correct += (yhat == y).type(torch.float).sum().item()
 
                 print(f"Epoch: {epoch}, batch: {batch:5d}] train loss: {avg_loss:.3f} train acc: {train_correct/current_period_total:.3f} | val loss: {valid_running_loss / len(valloader.dataset):.3f} val acc: {valid_correct/len(valloader.dataset):.3f}")
                 
+                running_loss = 0.0
                 # Put model back into train mode
                 model.train()
                 
