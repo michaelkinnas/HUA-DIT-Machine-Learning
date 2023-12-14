@@ -1,14 +1,14 @@
 import torch
 from torch import nn
+from torch import optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-from torch import optim
 import torchvision
 import pandas as pd
 import glob
 import os
 from pathlib import Path
-import PIL
+
 
 class MLProject2Dataset(Dataset):
     def __init__(self, data_dir, metadata_fname='metadata.csv', transform=None):
@@ -47,14 +47,19 @@ def image_transforms(m, n):
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
             ])
 
-
-# TODO accuracy
+#TODO reporting intervals for plotting
 def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
           epochs: int = 10, optimizer: optim = None, loss: nn.modules.loss = None,
           device: str = 'cpu', print_period: int = 10) -> None:
     
     print(f'Training on {device}')
     
+    batches = []
+    train_loss_history = []
+    train_acc_history = []
+    val_loss_history = []
+    val_acc_history = []
+
     model.train()
     for epoch in range(epochs):
         
@@ -79,7 +84,6 @@ def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = 
 
             # Zero gradients
             optimizer.zero_grad()
-
             # Backpropagation
             current_loss.backward()
             # Parameter update
@@ -93,34 +97,42 @@ def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = 
 
                 model.eval()
                 with torch.inference_mode():
-                    valid_running_loss = 0.0
-                    valid_correct = 0
+                    val_running_loss = 0.0
+                    val_correct = 0
                     for v_batch, (X, y) in enumerate(valloader, 1):
                         X, y = X.to(device), y.to(device)
 
                         # Model predictions
-                        pred_valid = model(X)
-                        current_loss = loss(pred_valid, y)
+                        pred_val = model(X)
+                        current_loss = loss(pred_val, y)
 
                         # Calculate loss for current batch
-                        valid_running_loss += current_loss.item()
+                        val_running_loss += current_loss.item()
            
                         # Convert probs to prediction
-                        valid_yhat = torch.argmax(pred_valid, 1)
+                        val_yhat = torch.argmax(pred_val, 1)
 
                         # Count correct predictions
-                        valid_correct += (valid_yhat == y).type(torch.float).sum().item()
+                        val_correct += (val_yhat == y).type(torch.float).sum().item()
                       
                 #Calculate metrics
-                train_accuracy = train_correct/current_period_total
-                validation_avg_loss = valid_running_loss / v_batch
-                validation_accuracy = valid_correct/len(valloader.dataset) # Use whole dataset length since all batches are proccessed before accuracy calculation
+                train_accuracy = train_correct / current_period_total
+                val_avg_loss = val_running_loss / v_batch
+                val_accuracy = val_correct / len(valloader.dataset) # Use whole dataset length since all batches are proccessed before accuracy calculation
 
-                print(f"Epoch: {epoch}, batch: {batch:5d}] train loss: {training_avg_loss:.3f} train acc: {train_accuracy:.3f} | val loss: {validation_avg_loss:.3f} val acc: {validation_accuracy:.3f}")
+                batches.append(epoch*10 + batch)
+                train_loss_history.append(training_avg_loss)
+                train_acc_history.append(train_accuracy)
+                val_loss_history.append(val_avg_loss)
+                val_acc_history.append(val_accuracy)    
+
+                print(f"[Epoch: {epoch}, batch: {batch:5d}] Train loss: {training_avg_loss:.3f}, Train acc: {train_accuracy:.3f} | Validation loss: {val_avg_loss:.3f}, Validation acc: {val_accuracy:.3f}")
 
                 running_loss = 0.0
                 # Put model back into train mode
                 model.train()
+               
+    return batches, train_loss_history, train_acc_history, val_loss_history, val_acc_history
                 
 
 
