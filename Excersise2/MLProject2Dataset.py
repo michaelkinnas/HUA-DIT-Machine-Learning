@@ -47,14 +47,14 @@ def image_transforms(m, n):
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
             ])
 
-#TODO reporting intervals for plotting
+#TODO return epoch metrics
 def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
           epochs: int = 10, optimizer: optim = None, loss: nn.modules.loss = None,
           device: str = 'cpu', print_period: int = 10) -> None:
     
     print(f'Training on {device}')
     
-    batches = []
+    epochs_report = []
     train_loss_history = []
     train_acc_history = []
     val_loss_history = []
@@ -62,12 +62,17 @@ def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = 
 
     model.train()
     for epoch in range(epochs):
-        
-        running_loss = 0.0
-        train_correct = 0
-        current_period_total = 0
+        # Per epoch for returning and plotting
+        epoch_accumulated_loss = 0.0
+        epoch_train_correct = 0
+        epoch_total = 0
 
-        for batch, (X, y) in enumerate(trainloader, 1):
+        # Per period
+        period_accumulated_loss = 0.0
+        period_train_correct = 0
+        period_total = 0
+
+        for batch, (X, y) in enumerate(trainloader, 0):
             # Move to device
             X, y = X.to(device), y.to(device)
 
@@ -79,8 +84,10 @@ def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = 
             yhat = torch.argmax(pred, 1)
         
             # Count correct predictions
-            train_correct += (yhat == y).type(torch.float).sum().item()
-            current_period_total += y.size(0) # Add each batch size separatly
+            period_train_correct += (yhat == y).type(torch.float).sum().item()
+            epoch_train_correct += (yhat == y).type(torch.float).sum().item()
+            period_total += y.size(0) # Add each batch size separatly
+            epoch_total += y.size(0)
 
             # Zero gradients
             optimizer.zero_grad()
@@ -89,17 +96,16 @@ def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = 
             # Parameter update
             optimizer.step()
            
-            running_loss += current_loss.item()
+            period_accumulated_loss += current_loss.item()
+            epoch_accumulated_loss += current_loss.item()
 
             # Print   
             if batch % print_period == 0:
-                training_avg_loss = running_loss / print_period
-
                 model.eval()
                 with torch.inference_mode():
                     val_running_loss = 0.0
                     val_correct = 0
-                    for v_batch, (X, y) in enumerate(valloader, 1):
+                    for v_batch, (X, y) in enumerate(valloader, 0):
                         X, y = X.to(device), y.to(device)
 
                         # Model predictions
@@ -115,25 +121,28 @@ def train_fn(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = 
                         # Count correct predictions
                         val_correct += (val_yhat == y).type(torch.float).sum().item()
                       
-                #Calculate metrics
-                train_accuracy = train_correct / current_period_total
-                val_avg_loss = val_running_loss / v_batch
-                val_accuracy = val_correct / len(valloader.dataset) # Use whole dataset length since all batches are proccessed before accuracy calculation
+                #Printing period metrics
+                avg_period_train_loss = period_accumulated_loss / print_period      # Accumulated loss / number of batches of reporting period
+                train_period_accuracy = period_train_correct / period_total         # Accumulated acc / number of samples in the training batches of reporting period
+                avg_val_loss = val_running_loss / (v_batch + 1)                     # Accumulated loss / number of validation batches
+                val_accuracy = val_correct / len(valloader.dataset)                 # Accumulated acc / number of samples in validation dataset (all batches)
 
-                batches.append(epoch*10 + batch)
-                train_loss_history.append(training_avg_loss)
-                train_acc_history.append(train_accuracy)
-                val_loss_history.append(val_avg_loss)
-                val_acc_history.append(val_accuracy)    
+                print(f"[Epoch: {epoch}, batch: {batch:5d}] Train loss: {avg_period_train_loss:.3f}, Train acc: {train_period_accuracy:.3f} | Validation loss: {avg_val_loss:.3f}, Validation acc: {val_accuracy:.3f}")
 
-                print(f"[Epoch: {epoch}, batch: {batch:5d}] Train loss: {training_avg_loss:.3f}, Train acc: {train_accuracy:.3f} | Validation loss: {val_avg_loss:.3f}, Validation acc: {val_accuracy:.3f}")
+                # Zero period counters
+                period_accumulated_loss = 0.0
+                period_train_correct = 0
+                period_total = 0
 
-                running_loss = 0.0
                 # Put model back into train mode
                 model.train()
                
-    return batches, train_loss_history, train_acc_history, val_loss_history, val_acc_history
-                
+        # Calculate per epoch metrics
+        avg_epoch_train_loss = epoch_accumulated_loss / len(trainloader)
+        epoch_train_accuracy = epoch_train_correct / epoch_total
+
+        # print(f"Epoch train loss {avg_epoch_train_loss}, acc {epoch_train_accuracy}, validatio loss {avg_val_loss}, acc: {val_accuracy}")
+            
 
 
 def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu') -> None:
