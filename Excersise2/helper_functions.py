@@ -99,6 +99,7 @@ def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = N
     model.eval()
     total = 0
     correct = 0
+    preds = []
     with torch.inference_mode():
         test_running_loss = 0.0
         for (X, y) in testloader:        
@@ -110,11 +111,16 @@ def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = N
 
             # Convert to predictions and calculate accuracy
             yhat = torch.argmax(pred, 1)
+
+            for pred in yhat:
+                preds.append(pred)
+            
             total += y.size(0)
             correct += (yhat == y).type(torch.float).sum().item()
 
     print(f"Average loss: {test_running_loss/len(testloader.dataset):.4f}. Test accuracy in {total} images: {correct/total:.4f}")  #Chech the 4f parameter without dot
 
+    return preds
 
 
 def vallidation(model: nn.Module, valloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu'):
