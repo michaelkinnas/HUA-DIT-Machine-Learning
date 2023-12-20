@@ -2,13 +2,14 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import numpy as np
 
 
 def train_net(model: nn.Module, trainloader: DataLoader, valloader: DataLoader = None, 
           epochs: int = 10, optimizer: optim = None, loss: nn.modules.loss = None,
-          device: str = 'cpu', print_period: int = 10) -> None:
+          device: str = 'cpu', print_period: int = 10) -> tuple:
     
     print(f'Training on {device}')
     
@@ -90,12 +91,12 @@ def train_net(model: nn.Module, trainloader: DataLoader, valloader: DataLoader =
         val_loss_history.append(val_running_loss / (v_batch + 1))
         val_acc_history.append(val_correct / len(valloader.dataset))
 
-        print(f"Epoch train loss {train_loss_history[-1]:.3f}, acc {train_acc_history[-1]:.3f}, validatio loss {val_loss_history[-1]:.3f}, acc: {val_acc_history[-1]:.3f}")
+        print(f"Epoch {epoch} train loss {train_loss_history[-1]:.3f}, acc {train_acc_history[-1]:.3f}, validation loss {val_loss_history[-1]:.3f}, validation acc: {val_acc_history[-1]:.3f}")
 
     return epochs, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
 
-def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu') -> None:
+def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu') -> list:
     model.eval()
     total = 0
     correct = 0
@@ -118,12 +119,12 @@ def test_net(model: nn.Module, testloader: DataLoader, loss: nn.modules.loss = N
             total += y.size(0)
             correct += (yhat == y).type(torch.float).sum().item()
 
-    print(f"Average loss: {test_running_loss/len(testloader.dataset):.4f}. Test accuracy in {total} images: {correct/total:.4f}")  #Chech the 4f parameter without dot
+    print(f"Average loss: {test_running_loss/len(testloader.dataset):.4f}. Test accuracy in {total} images: {correct/total:.4f}")
 
     return preds
 
 
-def vallidation(model: nn.Module, valloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu'):
+def vallidation(model: nn.Module, valloader: DataLoader, loss: nn.modules.loss = None, device: str = 'cpu') -> tuple:
     model.eval()
     with torch.inference_mode():
         val_running_loss = 0.0
@@ -149,15 +150,7 @@ def vallidation(model: nn.Module, valloader: DataLoader, loss: nn.modules.loss =
     return v_batch, val_running_loss, val_correct
 
 
-
-def image_transforms(m, n):
-    return transforms.Compose([
-                transforms.Resize((m, n), antialias=True),
-                transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
-            ])
-
-
-def plot_training_progress(epochs, t_acc, v_acc, t_loss, v_loss):
+def plot_training_progress(epochs, t_acc, v_acc, t_loss, v_loss) -> None:
     fig, ax = plt.subplots(1, 2, figsize=(10,4))
 
     ax[0].plot(range(epochs), t_acc, label='Train accuracy')
@@ -179,4 +172,23 @@ def plot_training_progress(epochs, t_acc, v_acc, t_loss, v_loss):
     ax[1].legend()
 
     plt.suptitle('Training progress')
+    plt.show()
+
+
+# Test output of model
+# test = torch.rand([1, 3, 100, 150], dtype=torch.float32, device=device)
+# with torch.inference_mode():
+#     model.eval()
+#     output = model(test)
+# print(f'Input shape: {test.shape}, output shape: {output.shape}')
+    
+def display_conf_matrix(y_preds, test, classes):
+    preds = np.array([x.tolist() for x in y_preds])
+    y_train = [x[1] for x in test]
+
+    conf_matrix = confusion_matrix(y_train, preds)
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix, display_labels=classes.values())
+    disp.plot()
+    plt.title('Πίνακας σύγχησης')
     plt.show()
