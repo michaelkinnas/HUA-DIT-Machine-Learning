@@ -91,7 +91,7 @@ def train_net(model: nn.Module, trainloader: DataLoader, valloader: DataLoader =
         val_loss_history.append(val_running_loss / (v_batch + 1))
         val_acc_history.append(val_correct / len(valloader.dataset))
 
-        print(f"Epoch {epoch} train loss {train_loss_history[-1]:.3f}, acc {train_acc_history[-1]:.3f}, validation loss {val_loss_history[-1]:.3f}, validation acc: {val_acc_history[-1]:.3f}")
+        print(f"Epoch {epoch} | Train loss {train_loss_history[-1]:.3f}, Train accuracy {train_acc_history[-1]:.3f} | Validation loss {val_loss_history[-1]:.3f}, Validation accuracy: {val_acc_history[-1]:.3f}")
 
     return epochs, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
@@ -151,21 +151,22 @@ def vallidation(model: nn.Module, valloader: DataLoader, loss: nn.modules.loss =
 
 
 def plot_training_progress(epochs, t_acc, v_acc, t_loss, v_loss) -> None:
-    fig, ax = plt.subplots(1, 2, figsize=(10,4))
+    fig, ax = plt.subplots(1, 2, figsize=(14,4))
 
-    ax[0].plot(range(epochs), t_acc, label='Train accuracy')
-    ax[0].plot(range(epochs), v_acc, '--', label='Validation accuracy')
-    ax[0].set_xticks(range(epochs))
+
+    ax[0].plot(range(1, epochs+1), t_acc, label='Train accuracy')
+    ax[0].plot(range(1, epochs+1), v_acc, '--', label='Validation accuracy')
+    ax[0].set_xticks(range(1, epochs+1))
     ax[0].set_ylim(0, 1.1)
     ax[0].set_xlabel('Epochs')
     ax[0].set_ylabel('Accuracy')
     ax[0].set_title('Accuracy')
     ax[0].legend()
 
-    ax[1].plot(range(epochs), t_loss, 'g-',label='Train loss')
-    ax[1].plot(range(epochs), v_loss, 'r--', label='Validation loss')
-    ax[1].set_xticks(range(epochs))
-    ax[1].set_ylim(0.5, 1.75)
+    ax[1].plot(range(1, epochs+1), t_loss, 'g-',label='Train loss')
+    ax[1].plot(range(1, epochs+1), v_loss, 'r--', label='Validation loss')
+    ax[1].set_xticks(range(1, epochs+1))
+    # ax[1].set_ylim(bottom=0)
     ax[1].set_xlabel('Epochs')
     ax[1].set_ylabel('Loss')
     ax[1].set_title('Loss')
@@ -192,3 +193,11 @@ def display_conf_matrix(y_preds, test, classes):
     disp.plot()
     plt.title('Πίνακας σύγχησης')
     plt.show()
+
+
+def print_train_time(start: float, end: float, device: torch.device = None):
+    """Prints difference between start and end time.
+    """
+    total_time = end - start
+    print(f'Train time on {device}: {total_time:.3f} seconds')
+    # return total_time

@@ -23,7 +23,7 @@ class SimpleCNN(nn.Module):
             )   
 
     def forward(self, x):
-        return self.stack(x)    
+        return self.conv_stack(x)    
 
 
 class ComplexCNN(nn.Module):
