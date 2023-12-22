@@ -11,9 +11,10 @@ from helper_functions import vallidation
 
 
 class MLProject2Dataset(Dataset):
-    def __init__(self, data_dir, metadata_fname='metadata.csv', transform=None, subset=None):
+    def __init__(self, data_dir, metadata_fname='metadata.csv', transform=None, subset=None, meta=False):
         self.data_dir = data_dir
         self.transform = transform
+        self.meta = meta
         
         # Create dataframe containing image id and file paths
         self.files = pd.DataFrame({
@@ -24,9 +25,22 @@ class MLProject2Dataset(Dataset):
         # Create dataframe for metadata
         self.metadata = pd.read_csv(data_dir + '/' + metadata_fname)
         self.metadata['dx'] = self.metadata['dx'].astype('category').cat.codes
+        
+        sex = pd.get_dummies(self.metadata['sex'], prefix='sex', dtype=float)
+        loc = pd.get_dummies(self.metadata['localization'], prefix='loc', dtype=float)
+
+        # Process metadata columns
+        self.metadata = pd.concat([self.metadata, sex, loc], axis=1)
+        self.metadata = self.metadata.drop(['sex', 'localization'], axis=1)
+        self.metadata['age'] = self.metadata['age'] / 100
+
+        # Drop some age NaN values and re-index
+        self.metadata = self.metadata.dropna()
 
         # Create main dataframe
-        self.dataset = pd.merge(self.files, self.metadata[['dx', 'image_id']], on='image_id')
+        # self.dataset = pd.merge(self.files, self.metadata[['dx', 'image_id']], on='image_id')    
+        self.dataset = pd.merge(self.files, self.metadata.drop(['lesion_id', 'dx_type'], axis=1), on='image_id')
+       
 
         # Smaller dataset size
         if subset == 'tiny':
@@ -48,4 +62,7 @@ class MLProject2Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return (image, self.dataset.at[idx, 'dx'].astype('long'))
+        if self.meta == True:
+            return (image, torch.tensor(self.dataset.loc[idx, 'age':], dtype=torch.float), self.dataset.at[idx, 'dx'].astype('long'))
+        else:
+            return (image, self.dataset.at[idx, 'dx'].astype('long'))
