@@ -19,8 +19,8 @@ class GPT2Dataset(Dataset):
         for txt in txt_list:
             encodings_dict = tokenizer('<|startoftext|>' + txt + '<|endoftext|>', truncation=True, max_length=max_length, padding="max_length") 
         
-        self.input_ids.append(torch.tensor(encodings_dict['input_ids']))
-        self.attn_masks.append(torch.tensor(encodings_dict['attention_mask']))
+            self.input_ids.append(torch.tensor(encodings_dict['input_ids']))
+            self.attn_masks.append(torch.tensor(encodings_dict['attention_mask']))
     
     def __len__(self):
         return len(self.input_ids)
@@ -51,13 +51,14 @@ batch_size = 2
 dataset = GPT2Dataset(starwars_seq, tokenizer, max_length=768)
 dataloader = DataLoader(dataset, sampler=RandomSampler(dataset), batch_size=batch_size)
 
-print(f"Number of batches {len(dataloader)}")
-print(next(iter(dataloader)))
+print(f"Number of batches: {len(dataloader)}")
 
 configuration = GPT2Config.from_pretrained('gpt2', output_hidden_states=False)
 model = GPT2LMHeadModel.from_pretrained("gpt2", config=configuration)
 model.resize_token_embeddings(len(tokenizer))
-device = torch.device("cuda")
+
+# device = torch.device("cuda")
+device = torch.device("cpu")
 
 epochs = 5
 learning_rate = 5e-4
@@ -80,8 +81,6 @@ model = model.to(device)
 
 def format_time(elapsed):
     return str(datetime.timedelta(seconds=int(round((elapsed)))))
-
-
 
 # Train the model
 model.train()
@@ -128,8 +127,10 @@ for epoch_i in range(0, epochs):
 
     # Calculate the average loss over all of the batches.
     avg_train_loss = total_train_loss / len(dataloader)
+
     # Measure how long this epoch took.
     training_time = format_time(time.time() - t0)
+
     print("")
     print(f" Average training loss: {avg_train_loss:0.2f}")
     print(f" Training epoch took: {training_time}")
