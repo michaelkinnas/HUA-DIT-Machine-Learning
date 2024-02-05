@@ -1,2 +1,3 @@
-ch.tensor(encodings_dict['input_ids']))
-            self.attn_masks.append(tor
+mple_outputs):
+        sample_output_dec = tokenizer.decode(sample_output, skip_special_tokens=True)
+        print(f"{i}: {sample_output_dec}")

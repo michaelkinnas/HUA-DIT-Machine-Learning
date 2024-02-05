@@ -57,8 +57,8 @@ configuration = GPT2Config.from_pretrained('gpt2', output_hidden_states=False)
 model = GPT2LMHeadModel.from_pretrained("gpt2", config=configuration)
 model.resize_token_embeddings(len(tokenizer))
 
-# device = torch.device("cuda")
-device = torch.device("cpu")
+device = torch.device("cuda")
+# device = torch.device("cpu")
 
 epochs = 5
 learning_rate = 5e-4
@@ -113,7 +113,7 @@ for epoch_i in range(0, epochs):
             
             model.eval()
 
-            sample_outputs = model.generate(do_sample=True, top_k=50, max_length=768,top_p=0.95, num_return_sequences=1)
+            sample_outputs = model.generate(do_sample=True, top_k=50, max_length=768, top_p=0.95, num_return_sequences=1)
             
             for i, sample_output in enumerate(sample_outputs):
                 sample_output_dec = tokenizer.decode(sample_output, skip_special_tokens=True)
