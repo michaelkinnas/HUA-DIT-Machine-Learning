@@ -46,7 +46,7 @@ for i in range(l-nlines):
 # See https://huggingface.co/docs/transformers/main_classes/tokenizer
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', eos_token='<|endoftext|>', pad_token='<|pad|>')
 
-batch_size = 2
+batch_size = 1
 
 dataset = GPT2Dataset(starwars_seq, tokenizer, max_length=768)
 dataloader = DataLoader(dataset, sampler=RandomSampler(dataset), batch_size=batch_size)
@@ -65,7 +65,7 @@ learning_rate = 5e-4
 warmup_steps = 1e2
 epsilon = 1e-8
 
-sample_every = 100
+sample_every = 200
 
 optimizer = AdamW(model.parameters(), lr=learning_rate, eps=epsilon)
 total_steps = len(dataloader) * epochs

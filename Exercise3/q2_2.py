@@ -21,7 +21,7 @@ while True:
 
     encoded_text = tokenizer(text, return_tensors='pt').to(device)
 
-    output = model.generate(**encoded_text, do_sample=True, top_k=50, max_length=768,top_p=0.95, num_return_sequences=2)
+    output = model.generate(**encoded_text, do_sample=True, top_k=50, max_length=768,top_p=0.95, num_return_sequences=1)
 
     for i, sample_output in enumerate(output):
         sample_output_dec = tokenizer.decode(sample_output, skip_special_tokens=True)
